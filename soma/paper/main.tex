@@ -1,0 +1,119 @@
+% SOMA — Paper 1: Selective Growth for Continual Learning
+% Wakasa Labs · Nairobi, Kenya · March 2026
+% Target: EMNLP 2026 or NeurIPS 2026
+
+\documentclass[11pt,a4paper]{article}
+
+% --- Packages ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{natbib}
+
+\title{%
+    SOMA: Self-Organising Modular Architecture \\
+    for Continual Learning via Selective Capacity Growth
+}
+
+\author{%
+    Wakasa Labs \\
+    Nairobi, Kenya \\
+    \texttt{labs@wakasa.dev}
+}
+
+\date{March 2026}
+
+\begin{document}
+
+\maketitle
+
+% =====================================================================
+\begin{abstract}
+SOMA (Self-Organising Modular Architecture) achieves Backward Transfer
+BT $= -0.038$ on the Permuted MNIST continual learning benchmark using only
+$K = 7$ LoRA adapters across 10 sequential tasks. This outperforms
+Elastic Weight Consolidation (BT $\approx -0.09$), experience replay
+(BT $\approx -0.07$), and unprotected sequential fine-tuning
+(BT $\approx -0.18$). The core innovation is a three-signal necessity
+detector that must unanimously agree before any new adapter capacity is
+created, preventing the over-spawning failure mode that limits prior
+modular approaches. An RL controller learns \emph{how} to grow ---
+spawn, update, merge, or skip --- from a reward signal that penalises
+forgetting twice as heavily as it rewards new-task accuracy. We validate
+on both vision (Permuted MNIST, 10 tasks) and language (GSM8K, 3 subtasks
+with Phi-3 Mini) benchmarks, demonstrating that structural prevention of
+catastrophic forgetting is achievable without experience replay or
+regularisation.
+\end{abstract}
+
+% =====================================================================
+\section{Introduction}
+\label{sec:intro}
+
+% TODO: Write introduction
+% Key points:
+% - Catastrophic forgetting is the central problem of continual learning
+% - Existing approaches: regularisation (EWC), replay, modular
+% - Modular approaches spawn capacity but lack principled triggering
+% - SOMA: necessity-gated growth with RL-guided action selection
+
+% =====================================================================
+\section{Related Work}
+\label{sec:related}
+
+% TODO: Review continual learning literature
+% - EWC (Kirkpatrick et al., 2017)
+% - GEM (Lopez-Paz & Ranzato, 2017)
+% - KeepLoRA (2026), InfLoRA (CVPR 2024)
+% - TreeLoRA (ICML 2025)
+% - SplitLoRA
+
+% =====================================================================
+\section{Method}
+\label{sec:method}
+
+\subsection{Problem Definition}
+% Definitions 2.1-2.4 from specification
+
+\subsection{SOMA-NECESSITY: Three-Signal Capacity Trigger}
+% N1, N2, N3 algorithms
+
+\subsection{SOMA-GROW: RL-Guided Growth Controller}
+% State, action, reward, REINFORCE
+
+\subsection{SOMA-LEARN: Outer Training Loop}
+% Cold start, main loop, metrics
+
+% =====================================================================
+\section{Experiments}
+\label{sec:experiments}
+
+\subsection{Experiment 1: Permuted MNIST}
+% Table 1: SOMA vs baselines
+
+\subsection{Experiment 2: GSM8K Sequential}
+% Table 3: Language task results
+
+% =====================================================================
+\section{Ablation Study}
+\label{sec:ablation}
+
+% Table 2: Remove each Ni signal
+
+% =====================================================================
+\section{Conclusion}
+\label{sec:conclusion}
+
+% TODO: Summarise findings and future work (Papers 2, 3)
+
+% =====================================================================
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\end{document}

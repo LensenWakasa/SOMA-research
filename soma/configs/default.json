@@ -1,0 +1,31 @@
+{
+    "_comment": "SOMA default configuration — base config (inherit from this)",
+    "necessity": {
+        "plateau_patience": 300,
+        "plateau_min_delta": 0.001,
+        "plateau_window": 30,
+        "subspace_rank": 16,
+        "residual_threshold": 0.80,
+        "min_failures": 25,
+        "proj_dim": 32,
+        "silhouette_min": 0.30,
+        "entropy_default": 0.70,
+        "calibration_tasks": 2
+    },
+    "grow": {
+        "alpha": 1.0,
+        "beta": 2.0,
+        "gamma": 0.5,
+        "kl_gate": 0.10,
+        "max_k": 20,
+        "policy_lr": 0.01,
+        "discount": 0.99,
+        "update_every": 5
+    },
+    "router": {
+        "n_prototypes": 10
+    },
+    "learn": {
+        "cold_start_tasks": 2
+    }
+}

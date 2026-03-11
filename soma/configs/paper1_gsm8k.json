@@ -1,0 +1,30 @@
+{
+    "_comment": "Paper 1 — Experiment 2: GSM8K Sequential config",
+    "_inherits": "default.json",
+
+    "experiment": {
+        "name": "gsm8k_sequential",
+        "n_subtasks": 3,
+        "n_train": 500,
+        "n_test": 100,
+        "seed": 42
+    },
+    "model": {
+        "name": "microsoft/Phi-3-mini-4k-instruct",
+        "load_in_4bit": true,
+        "device_map": "auto"
+    },
+    "lora": {
+        "rank": 8,
+        "target_modules": ["q_proj", "v_proj"]
+    },
+    "training": {
+        "n_steps": 100,
+        "batch_size": 4,
+        "lr": 0.0002,
+        "optimizer": "adamw"
+    },
+    "pass_criteria": {
+        "backward_transfer_min": -0.05
+    }
+}

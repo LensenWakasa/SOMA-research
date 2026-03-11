@@ -1,0 +1,43 @@
+# Byte-compiled
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution
+dist/
+build/
+*.egg-info/
+*.egg
+
+# Virtual environments
+soma_env/
+venv/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Experiment outputs
+outputs/
+logs/
+wandb/
+checkpoints/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# LaTeX build
+soma/paper/*.aux
+soma/paper/*.log
+soma/paper/*.bbl
+soma/paper/*.blg
+soma/paper/*.out
+soma/paper/*.pdf
+soma/paper/*.synctex.gz

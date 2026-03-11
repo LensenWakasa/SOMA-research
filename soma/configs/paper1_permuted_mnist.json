@@ -1,0 +1,36 @@
+{
+    "_comment": "Paper 1 — Experiment 1: Permuted MNIST config",
+    "_inherits": "default.json",
+
+    "experiment": {
+        "name": "permuted_mnist",
+        "n_tasks": 10,
+        "n_train": 1000,
+        "n_test": 200,
+        "seed": 42
+    },
+    "model": {
+        "type": "mlp",
+        "input_dim": 784,
+        "hidden1": 256,
+        "hidden2": 128,
+        "output_dim": 10
+    },
+    "lora": {
+        "rank": 8,
+        "target_layer": "fc2"
+    },
+    "training": {
+        "n_steps": 200,
+        "batch_size": 64,
+        "lr": 0.001,
+        "optimizer": "adamw"
+    },
+    "grow": {
+        "max_k": 10
+    },
+    "pass_criteria": {
+        "backward_transfer_min": -0.05,
+        "max_k": 10
+    }
+}

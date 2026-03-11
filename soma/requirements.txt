@@ -1,0 +1,11 @@
+# SOMA — Core Dependencies
+# Python 3.10+ required. 3.11 recommended.
+
+torch>=2.2.0
+transformers>=4.40.0
+peft>=0.10.0
+scikit-learn>=1.4.0
+torchvision>=0.17.0
+numpy>=1.26.0
+tqdm>=4.66.0
+wandb>=0.16.0
