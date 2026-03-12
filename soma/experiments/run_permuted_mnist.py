@@ -133,6 +133,7 @@ class SimpleMLP(nn.Module):
 def make_soma_functions(
     base_model: nn.Module,
     pool: list,
+    router: Optional[SomaRouter] = None,
     device: str = "cpu",
     n_steps: int = 200,
     batch_size: int = 64,
@@ -155,8 +156,8 @@ def make_soma_functions(
             B = torch.tensor(B_init, dtype=torch.float32, device=device, requires_grad=True)
             A = torch.tensor(A_init, dtype=torch.float32, device=device, requires_grad=True)
         else:
-            B = torch.randn(HIDDEN1, LORA_RANK, device=device, requires_grad=True) * 0.01
-            A = torch.randn(LORA_RANK, HIDDEN2, device=device, requires_grad=True) * 0.01
+            B = torch.nn.Parameter(torch.randn(HIDDEN1, LORA_RANK, device=device) * 0.01)
+            A = torch.nn.Parameter(torch.randn(LORA_RANK, HIDDEN2, device=device) * 0.01)
 
         optimizer = optim.AdamW([B, A], lr=lr * lr_scale)
         criterion = nn.CrossEntropyLoss()
@@ -177,7 +178,10 @@ def make_soma_functions(
         return (B.detach().cpu().numpy(), A.detach().cpu().numpy())
 
     def eval_fn(adapter_idx, task_data):
-        """Evaluate adapter on task. adapter_idx=-1 -> best available."""
+        """Evaluate adapter on task.
+
+        adapter_idx=-1 uses router-based adapter selection for inference-time realism.
+        """
         x = torch.tensor(task_data["x_test"], dtype=torch.float32, device=device)
         y = task_data["y_test"]
 
@@ -185,13 +189,19 @@ def make_soma_functions(
             return 0.1  # random baseline for 10 classes
 
         if adapter_idx == -1:
-            # Try all adapters, return best accuracy
-            best_acc = 0.0
-            for i in range(len(pool)):
-                acc = eval_fn(i, task_data)
-                if acc > best_acc:
-                    best_acc = acc
-            return best_acc
+            # Route from hidden embeddings; fallback to newest adapter if router
+            # is unavailable or has no registered prototypes yet.
+            if router is not None and router.n_adapters > 0:
+                with torch.no_grad():
+                    x_route = x[: min(32, x.shape[0])]
+                    h_route = torch.relu(base_model.fc1(x_route)).cpu().numpy()
+                routed = router.route_batch(h_route)
+                # Majority vote over routed sample assignments.
+                values, counts = np.unique(routed, return_counts=True)
+                chosen = int(values[np.argmax(counts)]) if len(values) > 0 else len(pool) - 1
+                adapter_idx = chosen
+            else:
+                adapter_idx = len(pool) - 1
 
         if adapter_idx >= len(pool):
             return 0.1
@@ -223,8 +233,8 @@ def make_soma_functions(
         y = torch.tensor(task_data["y_train"][:100], dtype=torch.long, device=device)
 
         # Use a temporary LoRA for gradient computation
-        B = torch.randn(HIDDEN1, LORA_RANK, device=device, requires_grad=True) * 0.01
-        A = torch.randn(LORA_RANK, HIDDEN2, device=device, requires_grad=True) * 0.01
+        B = torch.nn.Parameter(torch.randn(HIDDEN1, LORA_RANK, device=device) * 0.01)
+        A = torch.nn.Parameter(torch.randn(LORA_RANK, HIDDEN2, device=device) * 0.01)
 
         criterion = nn.CrossEntropyLoss(reduction="none")
         base_model.eval()
@@ -340,8 +350,19 @@ def run_experiment(args):
         cfg=cfg,
     )
 
-    # Share pool reference
+    # Share pool reference.
     learn.pool = pool
+
+    # Rebind helpers with router so eval_fn(-1) uses routed inference instead
+    # of brute-force best-of-all adapter selection.
+    train_fn, eval_fn, embed_fn, grad_fn = make_soma_functions(
+        base_model, pool, router=learn.router, device=device,
+        n_steps=200, batch_size=64, lr=1e-3,
+    )
+    learn.train_fn = train_fn
+    learn.eval_fn = eval_fn
+    learn.embed_fn = embed_fn
+    learn.grad_fn = grad_fn
 
     # Run task stream
     past_tasks = []

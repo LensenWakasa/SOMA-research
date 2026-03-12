@@ -217,16 +217,14 @@ class SomaLearn:
             steps_since_spawn=self._steps_since_spawn,
         )
 
-        # Determine forced action: ceiling → MERGE; warmup → necessity-based
+        # Determine forced action: ceiling -> MERGE; warmup -> unconditional SPAWN
         force_action = None
         if self.k >= self.cfg.grow.max_k:
             force_action = GrowAction.MERGE
         elif task_idx < self.cfg.cold_start_tasks + 2:
-            # Warmup: bypass untrained RL policy for first 2 post-cold-start tasks
-            force_action = (
-                GrowAction.SPAWN_NEW if nec_result.necessity
-                else GrowAction.UPDATE_EXISTING
-            )
+            # Paper 1 warmup: force SPAWN for the first 2 post-cold-start tasks
+            # so each early task receives its own clean adapter.
+            force_action = GrowAction.SPAWN_NEW
 
         # SOMA-GROW step
         grow_result = self.grow.step(
