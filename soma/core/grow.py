@@ -127,6 +127,9 @@ class GrowthPolicy:
     def select(self, state: np.ndarray) -> GrowAction:
         """Select an action given the state vector.
 
+        MERGE (action 2) is masked out for Paper 1 — it risks destructive
+        adapter collapse before a Fisher-weighted merge is implemented.
+
         Args:
             state: shape [7] normalised state features.
 
@@ -136,6 +139,8 @@ class GrowthPolicy:
         state = np.asarray(state, dtype=np.float64)
         logits = state @ self.W + self.b
         probs = self._softmax(logits)
+        probs[GrowAction.MERGE] = 0.0   # disable MERGE for Paper 1
+        probs /= probs.sum()             # renormalise
         action_idx = int(np.random.choice(self.N_ACTIONS, p=probs))
         return GrowAction(action_idx)
 

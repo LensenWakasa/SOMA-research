@@ -142,7 +142,8 @@ class SomaLearn:
 
         # Tracking
         self.history: List[TaskLog] = []
-        self._peak_accuracies: Dict[int, float] = {}  # task_idx -> peak acc
+        self._peak_accuracies: Dict[int, float] = {}  # task_idx -> peak acc (diagonal)
+        self._acc_matrix: List[List[float]] = []      # [task_t][task_i] = acc on i after t
         self._steps_since_spawn: int = 0
         self._spawn_count: int = 0
         self._merge_count: int = 0
@@ -216,10 +217,16 @@ class SomaLearn:
             steps_since_spawn=self._steps_since_spawn,
         )
 
-        # Force merge at ceiling
+        # Determine forced action: ceiling → MERGE; warmup → necessity-based
         force_action = None
         if self.k >= self.cfg.grow.max_k:
             force_action = GrowAction.MERGE
+        elif task_idx < self.cfg.cold_start_tasks + 2:
+            # Warmup: bypass untrained RL policy for first 2 post-cold-start tasks
+            force_action = (
+                GrowAction.SPAWN_NEW if nec_result.necessity
+                else GrowAction.UPDATE_EXISTING
+            )
 
         # SOMA-GROW step
         grow_result = self.grow.step(
@@ -254,7 +261,8 @@ class SomaLearn:
         # Compute metrics
         acc = self.eval_fn(-1, task_data) if self.k > 0 else 0.0
         self._peak_accuracies[task_idx] = acc
-        bt = self._compute_bt(past_task_data)
+        self._record_acc_row(task_idx, past_task_data, task_data)
+        bt = self._compute_bt(task_idx)
         ft = self._compute_ft(task_idx, task_data)
 
         elapsed = time.time() - t0
@@ -315,7 +323,8 @@ class SomaLearn:
         # Metrics
         acc = self.eval_fn(-1, task_data) if self.k > 0 else 0.0
         self._peak_accuracies[task_idx] = acc
-        bt = self._compute_bt(past_task_data)
+        self._record_acc_row(task_idx, past_task_data, task_data)
+        bt = self._compute_bt(task_idx)
         ft = 0.0  # No forward transfer for cold start
 
         elapsed = time.time() - t0
@@ -340,21 +349,45 @@ class SomaLearn:
     # Metrics
     # ------------------------------------------------------------------
 
-    def _compute_bt(self, past_task_data: List[Any]) -> float:
-        """Backward Transfer: average accuracy change on old tasks.
+    def _record_acc_row(self, task_idx: int, past_task_data: List[Any], task_data: Any) -> None:
+        """Record a row in the accuracy matrix: acc on every seen task after task_idx.
 
-        BT = (1/(T-1)) * sum_{i=1}^{T-1} [A(M_T, T_i) - A(M_i, T_i)]
+        Row T stores [acc(T,0), acc(T,1), ..., acc(T,T)] where acc(T,i) is the
+        model's accuracy on task i immediately after finishing task T.
         """
-        if len(past_task_data) == 0 or self.k == 0:
+        if self.k == 0:
+            self._acc_matrix.append([])
+            return
+        row = [self.eval_fn(-1, d) for d in past_task_data]
+        row.append(self.eval_fn(-1, task_data))  # current task
+        self._acc_matrix.append(row)
+
+    def _compute_bt(self, task_idx: int) -> float:
+        """Backward Transfer using accumulated accuracy matrix.
+
+        BT = (1 / T) * sum_{i=0}^{T-1} [acc_matrix[T][i] - acc_matrix[i][i]]
+
+        Where acc_matrix[t][i] = accuracy on task i right after training on task t.
+        The diagonal acc_matrix[i][i] is the peak accuracy on task i.
+        """
+        T = task_idx  # number of past tasks
+        if T == 0 or len(self._acc_matrix) < T + 1:
             return 0.0
 
+        current_row = self._acc_matrix[task_idx]  # acc on all tasks after training on T
         diffs = []
-        for i, old_data in enumerate(past_task_data):
-            current_acc = self.eval_fn(-1, old_data)
-            peak_acc = self._peak_accuracies.get(i, current_acc)
-            diffs.append(current_acc - peak_acc)
+        for i in range(T):
+            if i >= len(current_row):
+                break
+            acc_now = current_row[i]
+            # Diagonal: acc on task i right after training on i
+            if i < len(self._acc_matrix) and i < len(self._acc_matrix[i]):
+                acc_peak = self._acc_matrix[i][i]
+            else:
+                acc_peak = self._peak_accuracies.get(i, acc_now)
+            diffs.append(acc_now - acc_peak)
 
-        return float(np.mean(diffs))
+        return float(np.mean(diffs)) if diffs else 0.0
 
     def _compute_ft(self, task_idx: int, task_data: Any) -> float:
         """Forward Transfer: how much past learning helps on new task.
