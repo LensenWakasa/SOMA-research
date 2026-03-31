@@ -1,6 +1,6 @@
 # SOMA-GROW Fix Proposal: Capacity-Aware SKIP Penalty
 
-**Author**: Wakasa Labs  
+**Author**: nanana 
 **Date**: March 31, 2026  
 **Status**: Draft  
 **Affects**: `soma/core/grow.py`, `soma/core/learn.py`
