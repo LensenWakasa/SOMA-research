@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Acsis — Wakasa Intelligence</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&display=swap');
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --black:#04050A;
+  --deep:#080C14;
+  --navy:#0C1220;
+  --gold:#C8922A;
+  --gold-bright:#D4A445;
+  --gold-pale:#F2D09A;
+  --gold-dim:#7A4F0C;
+  --white:#F5F0E8;
+  --dim:#8A8070;
+  --dimmer:#4A4438;
+}
+
+html{scroll-behavior:smooth;overflow-x:hidden}
+body{
+  background:var(--black);
+  color:var(--white);
+  font-family:'Cormorant Garamond',Georgia,serif;
+  overflow-x:hidden;
+  cursor:none;
+}
+
+/* Custom cursor */
+.cursor{
+  width:8px;height:8px;
+  background:var(--gold);
+  border-radius:50%;
+  position:fixed;
+  pointer-events:none;
+  z-index:9999;
+  mix-blend-mode:screen;
+  transition:transform 0.1s;
+}
+.cursor-ring{
+  width:32px;height:32px;
+  border:1px solid rgba(200,146,42,0.4);
+  border-radius:50%;
+  position:fixed;
+  pointer-events:none;
+  z-index:9998;
+  transition:all 0.15s ease;
+  transform:translate(-50%,-50%);
+}
+
+/* Canvas background */
+#cosmos{position:fixed;inset:0;z-index:0;opacity:0.6}
+
+/* Noise overlay */
+body::before{
+  content:'';position:fixed;inset:0;z-index:1;
+  opacity:0.03;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  background-repeat:repeat;
+  background-size:128px 128px;
+  pointer-events:none;
+}
+
+/* Page sections */
+.page{position:relative;z-index:2}
+
+/* ── NAV ── */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  padding:24px 48px;
+  display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid rgba(200,146,42,0.08);
+  background:rgba(4,5,10,0.4);
+  backdrop-filter:blur(24px);
+}
+.nav-logo{
+  font-size:13px;letter-spacing:0.25em;text-transform:uppercase;
+  color:var(--dim);font-family:'DM Mono',monospace;
+}
+.nav-logo span{color:var(--gold)}
+.nav-links{display:flex;gap:40px;list-style:none}
+.nav-links a{
+  font-family:'DM Mono',monospace;font-size:11px;
+  letter-spacing:0.15em;text-transform:uppercase;
+  color:var(--dim);text-decoration:none;
+  transition:color 0.3s;
+}
+.nav-links a:hover{color:var(--gold)}
+.nav-cta{
+  font-family:'DM Mono',monospace;font-size:11px;
+  letter-spacing:0.15em;text-transform:uppercase;
+  color:var(--gold);text-decoration:none;
+  border:1px solid rgba(200,146,42,0.4);
+  padding:8px 20px;border-radius:2px;
+  transition:all 0.3s;
+}
+.nav-cta:hover{background:rgba(200,146,42,0.1);border-color:var(--gold)}
+
+/* ── HERO ── */
+.hero{
+  min-height:100vh;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  text-align:center;
+  padding:120px 48px 80px;
+  position:relative;
+}
+
+.hero-eyebrow{
+  font-family:'DM Mono',monospace;font-size:11px;
+  letter-spacing:0.3em;text-transform:uppercase;
+  color:var(--gold);margin-bottom:32px;
+  display:flex;align-items:center;gap:16px;
+  opacity:0;animation:fadeUp 1s ease 0.3s forwards;
+}
+.hero-eyebrow::before,.hero-eyebrow::after{
+  content:'';width:40px;height:1px;background:var(--gold-dim);
+}
+
+h1{
+  font-size:clamp(64px,10vw,140px);
+  font-weight:300;line-height:0.95;
+  letter-spacing:-0.02em;
+  margin-bottom:8px;
+  opacity:0;animation:fadeUp 1.2s ease 0.5s forwards;
+}
+h1 .gold{
+  color:var(--gold);font-style:italic;font-weight:400;
+}
+h1 .thin{font-weight:200;color:var(--dim)}
+
+.hero-sub{
+  font-size:clamp(18px,2.5vw,28px);font-weight:300;
+  color:var(--dim);letter-spacing:0.05em;
+  margin:24px 0 48px;line-height:1.6;max-width:600px;
+  opacity:0;animation:fadeUp 1.2s ease 0.7s forwards;
+}
+
+.hero-actions{
+  display:flex;gap:16px;flex-wrap:wrap;justify-content:center;
+  opacity:0;animation:fadeUp 1.2s ease 0.9s forwards;
+}
+.btn-primary{
+  background:var(--gold);color:var(--black);
+  font-family:'DM Mono',monospace;font-size:12px;
+  letter-spacing:0.15em;text-transform:uppercase;
+  padding:16px 40px;border:none;border-radius:2px;
+  cursor:none;text-decoration:none;
+  transition:all 0.3s;font-weight:500;
+}
+.btn-primary:hover{background:var(--gold-bright);transform:translateY(-2px)}
+.btn-ghost{
+  background:transparent;color:var(--white);
+  font-family:'DM Mono',monospace;font-size:12px;
+  letter-spacing:0.15em;text-transform:uppercase;
+  padding:16px 40px;
+  border:1px solid rgba(255,255,255,0.15);border-radius:2px;
+  cursor:none;text-decoration:none;
+  transition:all 0.3s;
+}
+.btn-ghost:hover{border-color:rgba(255,255,255,0.4);transform:translateY(-2px)}
+
+.hero-stat-row{
+  display:flex;gap:64px;margin-top:80px;
+  opacity:0;animation:fadeUp 1.2s ease 1.1s forwards;
+}
+.hero-stat{text-align:center}
+.hero-stat-num{
+  font-size:36px;font-weight:600;color:var(--gold);
+  font-style:italic;line-height:1;
+}
+.hero-stat-label{
+  font-family:'DM Mono',monospace;font-size:10px;
+  letter-spacing:0.2em;text-transform:uppercase;
+  color:var(--dim);margin-top:8px;
+}
+
+/* ── SCROLL INDICATOR ── */
+.scroll-hint{
+  position:absolute;bottom:40px;left:50%;transform:translateX(-50%);
+  font-family:'DM Mono',monospace;font-size:10px;
+  letter-spacing:0.2em;color:var(--dimmer);text-transform:uppercase;
+  display:flex;flex-direction:column;align-items:center;gap:12px;
+  opacity:0;animation:fadeUp 1s ease 1.5s forwards;
+}
+.scroll-line{
+  width:1px;height:40px;background:linear-gradient(to bottom,var(--gold-dim),transparent);
+  animation:scrollLine 2s ease infinite;
+}
+@keyframes scrollLine{
+  0%{transform:scaleY(0);transform-origin:top}
+  50%{transform:scaleY(1);transform-origin:top}
+  50.01%{transform:scaleY(1);transform-origin:bottom}
+  100%{transform:scaleY(0);transform-origin:bottom}
+}
+
+/* ── SECTION COMMON ── */
+section{padding:120px 48px;max-width:1400px;margin:0 auto}
+.section-label{
+  font-family:'DM Mono',monospace;font-size:10px;
+  letter-spacing:0.3em;text-transform:uppercase;
+  color:var(--gold-dim);margin-bottom:16px;
+  display:flex;align-items:center;gap:12px;
+}
+.section-label::before{content:attr(data-n);color:var(--dimmer)}
+h2{
+  font-size:clamp(36px,5vw,72px);font-weight:300;
+  line-height:1.1;margin-bottom:24px;
+}
+h2 em{color:var(--gold);font-style:italic;font-weight:400}
+
+.section-divider{
+  width:100%;height:1px;
+  background:linear-gradient(90deg,transparent,var(--gold-dim),transparent);
+  margin:0;
+}
+
+/* ── MISSION SECTION ── */
+.mission-grid{
+  display:grid;grid-template-columns:1fr 1fr;gap:80px;
+  align-items:center;margin-top:64px;
+}
+.mission-text p{
+  font-size:20px;font-weight:300;line-height:1.8;
+  color:var(--dim);margin-bottom:24px;
+}
+.mission-text p strong{color:var(--white);font-weight:400}
+.mission-quote{
+  border-left:2px solid var(--gold);padding-left:32px;
+  font-size:24px;font-weight:300;font-style:italic;
+  line-height:1.6;color:var(--white);
+}
+.mission-visual{
+  position:relative;
+  display:flex;flex-direction:column;gap:16px;
+}
+
+/* ORI Layers visual */
+.ori-layer{
+  padding:24px 32px;border-radius:4px;
+  border:1px solid;position:relative;
+  transition:all 0.4s;
+  cursor:none;
+}
+.ori-layer:hover{transform:translateX(8px)}
+.ori-l1{background:rgba(200,146,42,0.04);border-color:rgba(200,146,42,0.15)}
+.ori-l2{background:rgba(200,146,42,0.07);border-color:rgba(200,146,42,0.25)}
+.ori-l3{background:rgba(200,146,42,0.10);border-color:rgba(200,146,42,0.4)}
+.ori-layer-num{
+  font-family:'DM Mono',monospace;font-size:10px;
+  letter-spacing:0.2em;color:var(--gold-dim);margin-bottom:8px;
+}
+.ori-layer-title{font-size:18px;font-weight:400;color:var(--gold);margin-bottom:4px}
+.ori-layer-sub{font-family:'DM Mono',monospace;font-size:11px;color:var(--dim)}
+.ori-connector{
+  width:2px;height:20px;background:var(--gold-dim);
+  margin:0 auto;opacity:0.4;
+}
+.ori-layer-badge{
+  position:absolute;right:20px;top:50%;transform:translateY(-50%);
+  font-family:'DM Mono',monospace;font-size:9px;
+  letter-spacing:0.1em;padding:4px 10px;border-radius:2px;
+}
+.badge-done{background:rgba(34,197,94,0.1);color:#4ade80;border:1px solid rgba(34,197,94,0.2)}
+.badge-building{background:rgba(200,146,42,0.1);color:var(--gold);border:1px solid rgba(200,146,42,0.2)}
+.badge-vision{background:rgba(100,100,100,0.1);color:var(--dim);border:1px solid rgba(100,100,100,0.2)}
+
+/* ── CAPABILITIES ── */
+.cap-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:1px;
+  background:var(--dimmer);margin-top:64px;
+  border:1px solid var(--dimmer);
+}
+.cap-card{
+  background:var(--deep);padding:40px 32px;
+  transition:background 0.3s;
+  position:relative;overflow:hidden;
+}
+.cap-card:hover{background:rgba(12,18,32,0.9)}
+.cap-card::before{
+  content:'';position:absolute;
+  top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--gold),transparent);
+  transform:scaleX(0);transition:transform 0.4s;
+}
+.cap-card:hover::before{transform:scaleX(1)}
+.cap-icon{
+  font-size:28px;margin-bottom:20px;display:block;
+  filter:grayscale(0.5);transition:filter 0.3s;
+}
+.cap-card:hover .cap-icon{filter:grayscale(0)}
+.cap-title{font-size:20px;font-weight:400;margin-bottom:12px;color:var(--white)}
+.cap-desc{
+  font-family:'DM Mono',monospace;font-size:12px;
+  color:var(--dim);line-height:1.7;
+}
+.cap-n{
+  position:absolute;bottom:20px;right:24px;
+  font-family:'DM Mono',monospace;font-size:10px;
+  color:var(--dimmer);letter-spacing:0.1em;
+}
+
+/* ── THE LOOP ── */
+.loop-section{
+  text-align:center;padding:120px 48px;
+  position:relative;
+}
+.loop-container{
+  max-width:900px;margin:64px auto 0;
+  position:relative;
+}
+.loop-steps{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:32px;
+  position:relative;
+}
+.loop-steps::before{
+  content:'';position:absolute;
+  top:40px;left:16.67%;right:16.67%;height:1px;
+  background:linear-gradient(90deg,var(--gold-dim),var(--gold),var(--gold-dim));
+  z-index:0;
+}
+.loop-step{position:relative;z-index:1;text-align:center;padding:0 16px}
+.loop-step-num{
+  width:80px;height:80px;
+  background:var(--deep);border:1px solid var(--gold-dim);
+  border-radius:50%;display:flex;align-items:center;justify-content:center;
+  margin:0 auto 20px;font-size:24px;font-weight:300;
+  font-style:italic;color:var(--gold);
+  transition:all 0.4s;
+}
+.loop-step:hover .loop-step-num{
+  background:rgba(200,146,42,0.1);border-color:var(--gold);
+  box-shadow:0 0 30px rgba(200,146,42,0.2);
+}
+.loop-step-title{font-size:18px;font-weight:400;margin-bottom:8px;color:var(--white)}
+.loop-step-desc{
+  font-family:'DM Mono',monospace;font-size:11px;color:var(--dim);line-height:1.6;
+}
+
+/* Second row of loop */
+.loop-steps-2{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:32px;
+  margin-top:48px;
+}
+
+/* ── TECH STACK ── */
+.stack-section{padding:120px 48px;max-width:1400px;margin:0 auto}
+.stack-grid{
+  display:grid;grid-template-columns:1fr 2fr;gap:80px;
+  align-items:start;margin-top:64px;
+}
+.stack-nav{display:flex;flex-direction:column;gap:4px}
+.stack-nav-item{
+  padding:16px 24px;border-left:2px solid transparent;
+  font-family:'DM Mono',monospace;font-size:12px;
+  letter-spacing:0.1em;text-transform:uppercase;color:var(--dim);
+  cursor:none;transition:all 0.3s;
+}
+.stack-nav-item.active,.stack-nav-item:hover{
+  border-color:var(--gold);color:var(--white);
+  background:rgba(200,146,42,0.05);
+}
+.stack-content{
+  display:grid;grid-template-columns:1fr 1fr;gap:16px;
+}
+.stack-card{
+  background:rgba(8,12,20,0.8);border:1px solid rgba(200,146,42,0.1);
+  border-radius:4px;padding:24px;transition:border-color 0.3s;
+}
+.stack-card:hover{border-color:rgba(200,146,42,0.3)}
+.stack-card-name{
+  font-family:'DM Mono',monospace;font-size:13px;
+  color:var(--gold);margin-bottom:8px;font-weight:500;
+}
+.stack-card-desc{font-size:14px;color:var(--dim);line-height:1.6;font-weight:300}
+.stack-card-badge{
+  display:inline-block;margin-top:12px;
+  font-family:'DM Mono',monospace;font-size:9px;
+  letter-spacing:0.1em;padding:3px 8px;
+  background:rgba(200,146,42,0.08);color:var(--gold-dim);
+  border:1px solid rgba(200,146,42,0.15);border-radius:2px;
+}
+
+/* ── TIMELINE ── */
+.timeline-section{padding:120px 48px;max-width:1400px;margin:0 auto}
+.timeline{
+  display:grid;grid-template-columns:repeat(4,1fr);
+  gap:1px;background:var(--dimmer);margin-top:64px;
+  border:1px solid var(--dimmer);
+}
+.timeline-phase{
+  background:var(--deep);padding:32px 24px;
+  position:relative;
+}
+.timeline-phase-bar{
+  height:3px;margin-bottom:24px;border-radius:2px;
+}
+.phase-1 .timeline-phase-bar{background:var(--gold)}
+.phase-2 .timeline-phase-bar{background:rgba(200,146,42,0.5)}
+.phase-3 .timeline-phase-bar{background:rgba(200,146,42,0.25)}
+.phase-4 .timeline-phase-bar{background:rgba(200,146,42,0.1)}
+.timeline-phase-label{
+  font-family:'DM Mono',monospace;font-size:10px;
+  letter-spacing:0.2em;color:var(--dimmer);margin-bottom:8px;
+}
+.timeline-phase-title{font-size:18px;font-weight:400;margin-bottom:16px;color:var(--white)}
+.timeline-phase-items{list-style:none;display:flex;flex-direction:column;gap:8px}
+.timeline-phase-items li{
+  font-family:'DM Mono',monospace;font-size:11px;color:var(--dim);
+  display:flex;align-items:flex-start;gap:8px;line-height:1.5;
+}
+.timeline-phase-items li::before{content:'→';color:var(--gold-dim);flex-shrink:0}
+.timeline-phase-eta{
+  margin-top:20px;font-family:'DM Mono',monospace;font-size:10px;
+  color:var(--gold-dim);letter-spacing:0.1em;
+}
+
+/* ── CTA ── */
+.cta-section{
+  min-height:60vh;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  text-align:center;padding:120px 48px;
+  position:relative;
+}
+.cta-section::before{
+  content:'';position:absolute;
+  width:600px;height:600px;
+  background:radial-gradient(circle,rgba(200,146,42,0.06) 0%,transparent 70%);
+  top:50%;left:50%;transform:translate(-50%,-50%);
+  pointer-events:none;
+}
+.cta-section h2{font-size:clamp(40px,6vw,88px);max-width:800px;margin-bottom:32px}
+.cta-section p{
+  font-family:'DM Mono',monospace;font-size:13px;
+  color:var(--dim);margin-bottom:48px;letter-spacing:0.05em;
+}
+
+/* ── FOOTER ── */
+footer{
+  border-top:1px solid rgba(200,146,42,0.1);
+  padding:48px;
+  display:flex;align-items:center;justify-content:space-between;
+  position:relative;z-index:2;
+  max-width:1400px;margin:0 auto;
+}
+.footer-logo{
+  font-family:'DM Mono',monospace;font-size:12px;
+  letter-spacing:0.2em;color:var(--dimmer);text-transform:uppercase;
+}
+.footer-logo span{color:var(--gold)}
+.footer-links{display:flex;gap:32px}
+.footer-links a{
+  font-family:'DM Mono',monospace;font-size:10px;
+  letter-spacing:0.15em;text-transform:uppercase;
+  color:var(--dimmer);text-decoration:none;transition:color 0.3s;
+}
+.footer-links a:hover{color:var(--gold)}
+.footer-right{
+  font-family:'DM Mono',monospace;font-size:10px;
+  color:var(--dimmer);letter-spacing:0.1em;
+}
+
+/* ── ANIMATIONS ── */
+@keyframes fadeUp{
+  from{opacity:0;transform:translateY(24px)}
+  to{opacity:1;transform:translateY(0)}
+}
+.reveal{opacity:0;transform:translateY(32px);transition:all 0.8s cubic-bezier(0.16,1,0.3,1)}
+.reveal.visible{opacity:1;transform:translateY(0)}
+
+/* ── RESPONSIVE ── */
+@media(max-width:900px){
+  nav{padding:20px 24px}
+  .nav-links{display:none}
+  section{padding:80px 24px}
+  .mission-grid,.stack-grid{grid-template-columns:1fr}
+  .cap-grid{grid-template-columns:1fr}
+  .loop-steps,.loop-steps-2{grid-template-columns:1fr}
+  .loop-steps::before{display:none}
+  .timeline{grid-template-columns:1fr 1fr}
+  footer{flex-direction:column;gap:24px;text-align:center}
+  .hero-stat-row{gap:32px;flex-wrap:wrap;justify-content:center}
+  h1{font-size:clamp(48px,12vw,80px)}
+}
+</style>
+</head>
+<body>
+
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<canvas id="cosmos"></canvas>
+
+<div class="page">
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">Wakasa<span>Intelligence</span></div>
+  <ul class="nav-links">
+    <li><a href="#mission">Mission</a></li>
+    <li><a href="#capabilities">Capabilities</a></li>
+    <li><a href="#architecture">Architecture</a></li>
+    <li><a href="#roadmap">Roadmap</a></li>
+  </ul>
+  <a href="#access" class="nav-cta">Request Access</a>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-eyebrow">Wakasa Intelligence · Nairobi, Kenya · 2026</div>
+  <h1>
+    <span class="thin">The</span> <span class="gold">Acsis</span><br>
+    <span class="thin">Intelligence</span>
+  </h1>
+  <p class="hero-sub">One task. Understand everything.<br>A machine that learns, verifies, reasons, and discovers.</p>
+  <div class="hero-actions">
+    <a href="#access" class="btn-primary">Request Early Access</a>
+    <a href="#mission" class="btn-ghost">Read the Vision</a>
+  </div>
+  <div class="hero-stat-row">
+    <div class="hero-stat">
+      <div class="hero-stat-num">3</div>
+      <div class="hero-stat-label">Intelligence Layers</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-num">∞</div>
+      <div class="hero-stat-label">Knowledge Growth</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-num">0</div>
+      <div class="hero-stat-label">Catastrophic Forgetting</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-num">1</div>
+      <div class="hero-stat-label">Mission: Everything</div>
+    </div>
+  </div>
+  <div class="scroll-hint">
+    <div class="scroll-line"></div>
+    Explore
+  </div>
+</div>
+
+<div class="section-divider"></div>
+
+<!-- MISSION -->
+<section id="mission">
+  <div class="section-label" data-n="01">Mission</div>
+  <h2>Built to <em>understand</em><br>the universe</h2>
+  <div class="mission-grid">
+    <div class="mission-text reveal">
+      <p>Current AI are <strong>compression algorithms</strong>. They encode human knowledge into weights, retrieve it, recombine it. They are extraordinary at this. But they cannot verify what they know, cannot grow where they are ignorant, and cannot produce genuinely new knowledge.</p>
+      <p>Acsis is different. It operates on a <strong>three-layer architecture</strong> — ORI — that separates storage from learning and learning from reasoning. It knows what it knows, checks if it's right, and builds new understanding from the verified remainder.</p>
+      <blockquote class="mission-quote">
+        "To build the first machine that truly learns — and aim it at the hardest problems facing our species, from the classroom to the cosmos."
+      </blockquote>
+    </div>
+    <div class="mission-visual reveal">
+      <div class="ori-layer ori-l3">
+        <span class="ori-layer-num">LAYER III</span>
+        <div class="ori-layer-title">Reasoning</div>
+        <div class="ori-layer-sub">formal inference · verified new truths · discovery</div>
+        <span class="ori-layer-badge badge-vision">VISION</span>
+      </div>
+      <div class="ori-connector"></div>
+      <div class="ori-layer ori-l2">
+        <span class="ori-layer-num">LAYER II</span>
+        <div class="ori-layer-title">Learning — SOMA</div>
+        <div class="ori-layer-sub">necessity-driven growth · selective adaptation · no forgetting</div>
+        <span class="ori-layer-badge badge-building">BUILDING</span>
+      </div>
+      <div class="ori-connector"></div>
+      <div class="ori-layer ori-l1">
+        <span class="ori-layer-num">LAYER I</span>
+        <div class="ori-layer-title">Storage</div>
+        <div class="ori-layer-sub">parametric compression · world knowledge · retrieval</div>
+        <span class="ori-layer-badge badge-done">ACTIVE</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- CAPABILITIES -->
+<section id="capabilities">
+  <div class="section-label" data-n="02">Capabilities</div>
+  <h2>What Acsis <em>does</em></h2>
+  <div class="cap-grid reveal">
+    <div class="cap-card">
+      <span class="cap-icon">🔍</span>
+      <div class="cap-title">Research & Verify</div>
+      <div class="cap-desc">Searches the web, arXiv, PubMed, and structured databases in real time. Cross-references sources. Builds confidence scores for every claim. Updates its knowledge when evidence contradicts it.</div>
+      <span class="cap-n">01</span>
+    </div>
+    <div class="cap-card">
+      <span class="cap-icon">🧠</span>
+      <div class="cap-title">Reason & Deduce</div>
+      <div class="cap-desc">Applies deductive, inductive, and abductive reasoning over verified knowledge. Produces step-by-step inference chains. Writes and executes code to verify mathematical claims numerically.</div>
+      <span class="cap-n">02</span>
+    </div>
+    <div class="cap-card">
+      <span class="cap-icon">⚗️</span>
+      <div class="cap-title">Simulate & Experiment</div>
+      <div class="cap-desc">Runs computational experiments autonomously. Builds mathematical models. Tests hypotheses by simulation. Iterates until it reaches a conclusion it can defend, then shares results with you.</div>
+      <span class="cap-n">03</span>
+    </div>
+    <div class="cap-card">
+      <span class="cap-icon">🌱</span>
+      <div class="cap-title">Grow Without Forgetting</div>
+      <div class="cap-desc">Powered by SOMA — Self-Organising Modular Architecture. When Acsis encounters a domain it cannot handle, it grows new capacity. Old knowledge is structurally preserved. Forgetting is architecturally impossible.</div>
+      <span class="cap-n">04</span>
+    </div>
+    <div class="cap-card">
+      <span class="cap-icon">💡</span>
+      <div class="cap-title">Discover & Connect</div>
+      <div class="cap-desc">Finds patterns across domains that human researchers, siloed by discipline, would not see. Makes connections between verified facts. Generates hypotheses. Proposes experiments. Flags discoveries for human review.</div>
+      <span class="cap-n">05</span>
+    </div>
+    <div class="cap-card">
+      <span class="cap-icon">📡</span>
+      <div class="cap-title">Communicate & Update</div>
+      <div class="cap-desc">Sends you updates on Telegram, email, or any platform. Shares findings proactively. Learns from your corrections. Every human interaction becomes training signal. It gets smarter from talking to you.</div>
+      <span class="cap-n">06</span>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- THE LOOP -->
+<section id="architecture" style="text-align:center;padding:120px 48px">
+  <div class="section-label" style="justify-content:center" data-n="03">The Acsis Loop</div>
+  <h2>Six steps. <em>One mission.</em></h2>
+  <div class="loop-container">
+    <div class="loop-steps reveal">
+      <div class="loop-step">
+        <div class="loop-step-num">I</div>
+        <div class="loop-step-title">Retrieve</div>
+        <div class="loop-step-desc">Query internal knowledge base + external sources simultaneously</div>
+      </div>
+      <div class="loop-step">
+        <div class="loop-step-num">II</div>
+        <div class="loop-step-title">Verify</div>
+        <div class="loop-step-desc">Cross-reference, assign confidence, flag contradictions, update</div>
+      </div>
+      <div class="loop-step">
+        <div class="loop-step-num">III</div>
+        <div class="loop-step-title">Reason</div>
+        <div class="loop-step-desc">Apply deduction, induction, abduction over verified knowledge</div>
+      </div>
+    </div>
+    <div class="loop-steps-2 reveal">
+      <div class="loop-step">
+        <div class="loop-step-num">IV</div>
+        <div class="loop-step-title">Experiment</div>
+        <div class="loop-step-desc">Simulate, compute, test hypotheses in code</div>
+      </div>
+      <div class="loop-step">
+        <div class="loop-step-num">V</div>
+        <div class="loop-step-title">Discover</div>
+        <div class="loop-step-desc">Identify genuinely new conclusions, surface for human review</div>
+      </div>
+      <div class="loop-step">
+        <div class="loop-step-num">VI</div>
+        <div class="loop-step-title">Grow</div>
+        <div class="loop-step-desc">SOMA detects knowledge gaps, spawns new capacity, preserves all prior knowledge</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- TECH STACK -->
+<div class="stack-section reveal">
+  <div class="section-label" data-n="04">Technical Foundation</div>
+  <h2>Built on <em>real infrastructure</em></h2>
+  <div class="stack-grid">
+    <div class="stack-nav">
+      <div class="stack-nav-item active">Base Models</div>
+      <div class="stack-nav-item">Research Tools</div>
+      <div class="stack-nav-item">Memory Systems</div>
+      <div class="stack-nav-item">Compute</div>
+    </div>
+    <div class="stack-content">
+      <div class="stack-card">
+        <div class="stack-card-name">Qwen3-7B / Phi-3 Mini</div>
+        <div class="stack-card-desc">Open-weight foundation. 119 languages. Runs on single GPU. Full tool use support.</div>
+        <span class="stack-card-badge">LAYER I</span>
+      </div>
+      <div class="stack-card">
+        <div class="stack-card-name">SOMA LoRA Adapters</div>
+        <div class="stack-card-desc">Selective growth. Domain-specific adapters. Frozen after training. Zero forgetting guarantee.</div>
+        <span class="stack-card-badge">LAYER II</span>
+      </div>
+      <div class="stack-card">
+        <div class="stack-card-name">ChromaDB + Neo4j</div>
+        <div class="stack-card-desc">Vector embeddings + knowledge graph. Permanent external memory that survives retraining.</div>
+        <span class="stack-card-badge">MEMORY</span>
+      </div>
+      <div class="stack-card">
+        <div class="stack-card-name">Tavily + arXiv + PubMed</div>
+        <div class="stack-card-desc">Real-time web search, scientific paper retrieval, medical research access.</div>
+        <span class="stack-card-badge">TOOLS</span>
+      </div>
+      <div class="stack-card">
+        <div class="stack-card-name">Python Sandbox</div>
+        <div class="stack-card-desc">Isolated code execution. Acsis writes and runs experiments itself. Results verified numerically.</div>
+        <span class="stack-card-badge">REASONING</span>
+      </div>
+      <div class="stack-card">
+        <div class="stack-card-name">RunPod A100 / A10G</div>
+        <div class="stack-card-desc">On-demand GPU compute. Train adapters when needed. Inference always on. ~$60/month research budget.</div>
+        <span class="stack-card-badge">COMPUTE</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section-divider"></div>
+
+<!-- ROADMAP -->
+<div class="timeline-section">
+  <div class="section-label" data-n="05">Roadmap</div>
+  <h2>Four phases to <em>full capability</em></h2>
+  <div class="timeline reveal">
+    <div class="timeline-phase phase-1">
+      <div class="timeline-phase-bar"></div>
+      <div class="timeline-phase-label">Phase I · Now</div>
+      <div class="timeline-phase-title">Research Agent</div>
+      <ul class="timeline-phase-items">
+        <li>Web search + fact verification loop</li>
+        <li>Source cross-referencing</li>
+        <li>Confidence scoring</li>
+        <li>Telegram notifications</li>
+        <li>Basic Q&A with citations</li>
+      </ul>
+      <div class="timeline-phase-eta">~2 weeks · ~$20 compute</div>
+    </div>
+    <div class="timeline-phase phase-2">
+      <div class="timeline-phase-bar"></div>
+      <div class="timeline-phase-label">Phase II · Q2 2026</div>
+      <div class="timeline-phase-title">Reasoning Agent</div>
+      <ul class="timeline-phase-items">
+        <li>Code execution sandbox</li>
+        <li>Mathematical reasoning</li>
+        <li>Hypothesis testing by simulation</li>
+        <li>Knowledge graph construction</li>
+        <li>Multi-step inference chains</li>
+      </ul>
+      <div class="timeline-phase-eta">~6 weeks · ~$80 compute</div>
+    </div>
+    <div class="timeline-phase phase-3">
+      <div class="timeline-phase-bar"></div>
+      <div class="timeline-phase-label">Phase III · Q3 2026</div>
+      <div class="timeline-phase-title">Growing Agent</div>
+      <ul class="timeline-phase-items">
+        <li>SOMA integration live</li>
+        <li>Domain-specific adapter growth</li>
+        <li>Automatic gap detection</li>
+        <li>Opportunistic training schedule</li>
+        <li>No-forgetting guarantee</li>
+      </ul>
+      <div class="timeline-phase-eta">~12 weeks · ~$150 compute</div>
+    </div>
+    <div class="timeline-phase phase-4">
+      <div class="timeline-phase-bar"></div>
+      <div class="timeline-phase-label">Phase IV · 2027</div>
+      <div class="timeline-phase-title">Discovery Engine</div>
+      <ul class="timeline-phase-items">
+        <li>Formal verification (Lean 4)</li>
+        <li>CALM continuous backbone</li>
+        <li>Autonomous research proposals</li>
+        <li>Multi-agent collaboration</li>
+        <li>Full ORI stack: Layer III live</li>
+      </ul>
+      <div class="timeline-phase-eta">Paper 3 · Full ORI</div>
+    </div>
+  </div>
+</div>
+
+<div class="section-divider"></div>
+
+<!-- CTA -->
+<div class="cta-section" id="access">
+  <div class="section-label" style="justify-content:center" data-n="06">Access</div>
+  <h2>Be among the <em>first</em> to work with Acsis</h2>
+  <p>Limited early access · Researchers, scientists, and builders</p>
+  <div class="hero-actions">
+    <a href="mailto:lensen@wakasalabs.ai" class="btn-primary">Request Access</a>
+    <a href="https://github.com/LensenWakasa" class="btn-ghost">Follow on GitHub</a>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<div class="section-divider"></div>
+<footer>
+  <div class="footer-logo">Wakasa<span>Labs</span> · Nairobi, Kenya</div>
+  <div class="footer-links">
+    <a href="#">Research</a>
+    <a href="#">Acsis Grader</a>
+    <a href="#">GitHub</a>
+    <a href="#">Contact</a>
+  </div>
+  <div class="footer-right">Built on Earth. Aimed at Everything. ∞</div>
+</footer>
+
+</div><!-- end page -->
+
+<script>
+// Cursor
+const cursor = document.getElementById('cursor');
+const ring = document.getElementById('cursorRing');
+let mx=0,my=0,rx=0,ry=0;
+document.addEventListener('mousemove',e=>{
+  mx=e.clientX; my=e.clientY;
+  cursor.style.left=mx-4+'px';
+  cursor.style.top=my-4+'px';
+});
+(function animRing(){
+  rx+=(mx-rx)*0.12; ry+=(my-ry)*0.12;
+  ring.style.left=rx+'px'; ring.style.top=ry+'px';
+  requestAnimationFrame(animRing);
+})();
+document.querySelectorAll('a,button,[class*="btn"]').forEach(el=>{
+  el.addEventListener('mouseenter',()=>{ring.style.transform='translate(-50%,-50%) scale(1.8)';ring.style.borderColor='rgba(200,146,42,0.8)'});
+  el.addEventListener('mouseleave',()=>{ring.style.transform='translate(-50%,-50%) scale(1)';ring.style.borderColor='rgba(200,146,42,0.4)'});
+});
+
+// Cosmos canvas
+const canvas=document.getElementById('cosmos');
+const ctx=canvas.getContext('2d');
+let W,H,stars=[];
+function resize(){W=canvas.width=window.innerWidth;H=canvas.height=window.innerHeight}
+function initStars(){
+  stars=[];
+  for(let i=0;i<300;i++){
+    stars.push({
+      x:Math.random()*W,y:Math.random()*H,
+      r:Math.random()*1.5+0.2,
+      a:Math.random(),da:Math.random()*0.005+0.001,
+      gold:Math.random()<0.08
+    });
+  }
+}
+function drawStars(){
+  ctx.clearRect(0,0,W,H);
+  stars.forEach(s=>{
+    s.a+=s.da;
+    if(s.a>1||s.a<0)s.da*=-1;
+    ctx.beginPath();
+    ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+    ctx.fillStyle=s.gold?`rgba(200,146,42,${s.a})`:`rgba(245,240,232,${s.a*0.6})`;
+    ctx.fill();
+  });
+}
+// Orbiting particles
+let particles=[];
+for(let i=0;i<8;i++){
+  const a=Math.random()*Math.PI*2;
+  const r=200+Math.random()*300;
+  particles.push({a,r,speed:(Math.random()-0.5)*0.003+0.001,size:1+Math.random()});
+}
+function drawParticles(){
+  const cx=W/2,cy=H*0.4;
+  particles.forEach(p=>{
+    p.a+=p.speed;
+    const x=cx+Math.cos(p.a)*p.r;
+    const y=cy+Math.sin(p.a)*p.r*0.35;
+    ctx.beginPath();
+    ctx.arc(x,y,p.size,0,Math.PI*2);
+    ctx.fillStyle='rgba(200,146,42,0.3)';
+    ctx.fill();
+  });
+}
+function animate(){drawStars();drawParticles();requestAnimationFrame(animate)}
+window.addEventListener('resize',()=>{resize();initStars()});
+resize();initStars();animate();
+
+// Scroll reveals
+const reveals=document.querySelectorAll('.reveal');
+const obs=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{
+    if(e.isIntersecting){e.target.classList.add('visible');obs.unobserve(e.target)}
+  });
+},{threshold:0.15});
+reveals.forEach(r=>obs.observe(r));
+
+// Stack nav
+document.querySelectorAll('.stack-nav-item').forEach((item,i)=>{
+  item.addEventListener('click',()=>{
+    document.querySelectorAll('.stack-nav-item').forEach(x=>x.classList.remove('active'));
+    item.classList.add('active');
+  });
+});
+</script>
+</body>
+</html>
