@@ -1,33 +1,43 @@
-# acsis/requirements.txt
-# ─────────────────────────────────────────────────────────
-# Core
+# soma_v2/requirements.txt
+# ─────────────────────────────────────────────────────────────────────────────
+# Core runtime — all free, all open-source
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Async HTTP (retrieval)
 aiohttp>=3.9.0
-nest-asyncio>=1.6.0
+nest-asyncio>=1.6.0        # async in notebooks
+
+# Numerical
+numpy>=1.24.0
+scipy>=1.11.0
+
+# Clustering (N3 in SOMA-NECESSITY)
+scikit-learn>=1.4.0
 
 # ML (Phase 2+)
 torch>=2.0.0
-transformers>=4.40.0
-peft>=0.10.0
-bitsandbytes>=0.43.0      # 4-bit quantization
+transformers>=4.45.0       # Qwen3.6-27B support requires >=4.45
+peft>=0.10.0               # LoRA adapters
+bitsandbytes>=0.43.0       # 4-bit quantisation for T4
+
+# Formal verification (Phase 3)
+z3-solver>=4.12.0          # SMT solver (Z3) — Paper 1 partial
+# lean4: install separately via elan (https://leanprover.github.io)
 
 # Memory
 chromadb>=0.4.0
 sentence-transformers>=2.7.0
 
-# Knowledge graph (optional — falls back to in-memory)
-neo4j>=5.0.0
+# Knowledge graph
+neo4j>=5.0.0               # optional — falls back to in-memory
 
-# Tools
-numpy>=1.24.0
-scipy>=1.11.0
-pandas>=2.0.0
+# Notifications
+python-telegram-bot>=20.0  # optional
 
-# Search (optional — falls back to DuckDuckGo)
-tavily-python>=0.3.0
+# Utilities
+tqdm>=4.66.0
+wandb>=0.16.0              # experiment tracking
 
-# Notifications (optional)
-python-telegram-bot>=20.0
-
-# Dev
+# Dev / testing
 pytest>=7.0.0
 pytest-asyncio>=0.23.0

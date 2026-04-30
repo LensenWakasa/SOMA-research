@@ -18,9 +18,8 @@ References:
 
 from __future__ import annotations
 
-import math
-from dataclasses import dataclass, field
-from typing import List, Optional
+from dataclasses import dataclass
+from typing import List, Optional, Tuple
 
 import numpy as np
 from sklearn.cluster import DBSCAN
@@ -64,6 +63,12 @@ class NecessityConfig:
     """Fallback entropy threshold used before calibration."""
     calibration_tasks: int = 2
     """Number of cold-start tasks used to calibrate N3 entropy threshold."""
+
+    # DBSCAN
+    dbscan_eps: float = 0.5
+    """DBSCAN epsilon radius in cosine space."""
+    dbscan_min_samples: int = 5
+    """Minimum points to form a dense DBSCAN region."""
 
 
 # ---------------------------------------------------------------------------
@@ -222,7 +227,10 @@ class SomaNecessity:
 
         G = np.stack([g.ravel().astype(np.float64) for g in grads])
         # Thin SVD
-        _, _, Vt = np.linalg.svd(G, full_matrices=False)
+        try:
+            _, _, Vt = np.linalg.svd(G, full_matrices=False)
+        except np.linalg.LinAlgError:
+            return
         rank = min(self.cfg.subspace_rank, Vt.shape[0])
         new_vecs = Vt[:rank].T  # [d, rank]
 
@@ -250,23 +258,9 @@ class SomaNecessity:
         if n_fail < self.cfg.min_failures:
             return False, 0.0, 0.0, n_fail
 
-        G_fail = np.stack(self._failure_gradient_buffer).astype(np.float64)
-        # Centre
-        G_fail -= G_fail.mean(axis=0)
-
-        # SVD projection
-        _, _, Vt = np.linalg.svd(G_fail, full_matrices=False)
-        proj_dim = min(self.cfg.proj_dim, Vt.shape[0])
-        G_proj = G_fail @ Vt[:proj_dim].T  # [n_fail, proj_dim]
-
-        # Normalise to cosine space
-        norms = np.linalg.norm(G_proj, axis=1, keepdims=True)
-        norms = np.maximum(norms, 1e-12)
-        G_norm = G_proj / norms
-
-        # DBSCAN clustering
-        db = DBSCAN(eps=0.5, min_samples=5, metric="cosine").fit(G_norm)
-        labels = db.labels_
+        labels, entropy, G_norm = self._run_dbscan(self._failure_gradient_buffer)
+        if labels is None or entropy is None or G_norm is None:
+            return False, 0.0, 0.0, n_fail
 
         # Count non-noise clusters
         unique_labels = set(labels)
@@ -281,7 +275,10 @@ class SomaNecessity:
         if mask.sum() < 2:
             return False, 0.0, 0.0, n_fail
 
-        sil = float(silhouette_score(G_norm[mask], labels[mask], metric="cosine"))
+        try:
+            sil = float(silhouette_score(G_norm[mask], labels[mask], metric="cosine"))
+        except Exception:
+            sil = 0.0
 
         # Entropy of cluster sizes
         labelled_labels = labels[mask]
@@ -297,6 +294,49 @@ class SomaNecessity:
 
         fired = (sil > self.cfg.silhouette_min) and (entropy < threshold)
         return fired, sil, entropy, n_fail
+
+    def _run_dbscan(
+        self,
+        grads: List[np.ndarray],
+    ) -> Tuple[Optional[np.ndarray], Optional[float], Optional[np.ndarray]]:
+        """Run DBSCAN in projected cosine space.
+
+        Returns (labels, entropy, projected_points). Any value may be None on failure.
+        """
+        if len(grads) < self.cfg.min_failures:
+            return None, None, None
+
+        G = np.stack([g.ravel().astype(np.float64) for g in grads])
+        G -= G.mean(axis=0)
+
+        try:
+            _, _, Vt = np.linalg.svd(G, full_matrices=False)
+        except np.linalg.LinAlgError:
+            return None, None, None
+
+        proj_dim = min(self.cfg.proj_dim, Vt.shape[0])
+        G_proj = G @ Vt[:proj_dim].T
+        norms = np.linalg.norm(G_proj, axis=1, keepdims=True)
+        norms = np.maximum(norms, 1e-12)
+        G_norm = G_proj / norms
+
+        db = DBSCAN(
+            eps=self.cfg.dbscan_eps,
+            min_samples=self.cfg.dbscan_min_samples,
+            metric="cosine",
+        ).fit(G_norm)
+        labels = db.labels_
+
+        labelled = labels[labels != -1]
+        if len(labelled) == 0:
+            return labels, float("inf"), G_norm
+
+        counts = np.bincount(labelled)
+        p_k = counts / counts.sum()
+        eps = 1e-12
+        entropy = float(-np.sum(p_k * np.log(p_k + eps)))
+
+        return labels, entropy, G_norm
 
     # ------------------------------------------------------------------
     # Public interface
@@ -343,7 +383,7 @@ class SomaNecessity:
 
             if len(self._calibration_entropies) == self.cfg.calibration_tasks:
                 mean_entropy = float(np.mean(self._calibration_entropies))
-                self._entropy_threshold = 0.70 * mean_entropy
+                self._entropy_threshold = self.cfg.entropy_default * mean_entropy
 
     def reset_for_task(self) -> None:
         """Reset per-task state before starting a new task.
